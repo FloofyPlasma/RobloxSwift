@@ -89,91 +89,34 @@ class SwiftToLuauConverter: SyntaxVisitor {
         print("end")
     }
 
-    func walkFunctionBody(_ body: CodeBlockSyntax) {
-        for stmt in body.statements {
-            if let varDecl = stmt.item.as(VariableDeclSyntax.self) {
-                _ = visit(varDecl)
-            } else if let exprStmt = stmt.item.as(ExpressionStmtSyntax.self) {
-                if let functionCall = exprStmt.expression.as(FunctionCallExprSyntax.self) {
-                    _ = visit(functionCall)
-                }
-            } else if let returnStmt = stmt.item.as(ReturnStmtSyntax.self) {
-                let expr =
-                    returnStmt.expression?.description.trimmingCharacters(
-                        in: .whitespacesAndNewlines) ?? ""
-                print("\(indentation)return \(expr)")
-            } else {
-                let stmtText = stmt.description.trimmingCharacters(in: .whitespacesAndNewlines)
-                print("\(indentation)\(stmtText)")
-            }
-        }
-    }
-
-    func convertStringLiteralToLuauInterpolation(_ literal: String) -> String {
-        guard literal.first == "\"" && literal.last == "\"" else {
-            return literal
-        }
-
-        // Remove surrounding quotes
-        let content = String(literal.dropFirst().dropLast())
-
-        // Use regex to replace Swift interpolation patterns: \( ... )  =>  { ... }
-        let interpolationRegex = /\\\((.+?)\)/
-        var result = ""
-        var currentIndex = content.startIndex
-
-        for match in content.matches(of: interpolationRegex) {
-            let matchRange = match.range
-
-            // Append literal text before interpolation
-            result += content[currentIndex..<matchRange.lowerBound]
-            result += "{\(match.1)}"
-            currentIndex = matchRange.upperBound
-        }
-
-        result += content[currentIndex..<content.endIndex]
-
-        // Wrap the string in `` characters (specifies string interpolation in Luau)
-        return "`\(result)`"
-    }
+    // func walkFunctionBody(_ body: CodeBlockSyntax) {
+    //     for stmt in body.statements {
+    //         if let varDecl = stmt.item.as(VariableDeclSyntax.self) {
+    //             _ = visit(varDecl)
+    //         } else if let exprStmt = stmt.item.as(ExpressionStmtSyntax.self) {
+    //             if let functionCall = exprStmt.expression.as(FunctionCallExprSyntax.self) {
+    //                 _ = visit(functionCall)
+    //             }
+    //         } else if let returnStmt = stmt.item.as(ReturnStmtSyntax.self) {
+    //             let expr =
+    //                 returnStmt.expression?.description.trimmingCharacters(
+    //                     in: .whitespacesAndNewlines) ?? ""
+    //             print("\(indentation)return \(expr)")
+    //         } else {
+    //             let stmtText = stmt.description.trimmingCharacters(in: .whitespacesAndNewlines)
+    //             print("\(indentation)\(stmtText)")
+    //         }
+    //     }
+    // }
 
     // Process function call expressions to strip parameter labels
     override func visit(_ node: FunctionCallExprSyntax) -> SyntaxVisitorContinueKind {
-        // Get the expression being called.
-        let functionName = node.calledExpression.description.trimmingCharacters(
-            in: .whitespacesAndNewlines)
-        // Build a comma-separated list of arguments, ignoring any labels.
-        let arguments = node.arguments.map { arg in
-            arg.expression.description.trimmingCharacters(in: .whitespacesAndNewlines)
-        }.joined(separator: ", ")
+        print(convertFunctionCall(node))
 
-        // Print the transformed function call with current indentation.
-        print("\(indentation)\(functionName)(\(arguments))")
         return .skipChildren
     }
 
     // Enums
-    func convertEnum(_ enumDecl: EnumDeclSyntax) -> String {
-        let enumName = enumDecl.name.text
-        var cases: [String] = []
-
-        for member in enumDecl.memberBlock.members {
-            if let caseDecl = member.decl.as(EnumCaseDeclSyntax.self) {
-                for element in caseDecl.elements {
-                    let caseName = element.name.text
-                    if let rawValue = element.rawValue?.value {
-                        cases.append("\(caseName) = \(rawValue.description)")
-                    } else {
-                        cases.append("\(caseName) = \"\(caseName)\"")
-                    }
-                }
-            }
-        }
-
-        let luaTable = cases.joined(separator: ",\n\t")
-        return "local \(enumName) = {\n\t\(luaTable)\n}"
-    }
-
     override func visit(_ node: EnumDeclSyntax) -> SyntaxVisitorContinueKind {
         print(convertEnum(node))
 
