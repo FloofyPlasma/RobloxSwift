@@ -20,5 +20,5 @@ func convertEnum(_ enumDecl: EnumDeclSyntax) -> String {
     }
 
     let luaTable = cases.joined(separator: ",\n\t")
-    return "local \(enumName) = {\n\t\(luaTable)\n}"
+    return "local \(enumName) = table.freeze({\n\t\(luaTable)\n})"
 }
