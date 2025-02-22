@@ -1,7 +1,5 @@
 import Foundation
-
 import SwiftParser
-
 import SwiftSyntax
 
 class SwiftToLuauConverter: SyntaxVisitor {
@@ -27,19 +25,6 @@ class SwiftToLuauConverter: SyntaxVisitor {
                 var value = initializer.value.description.trimmingCharacters(
                     in: .whitespacesAndNewlines)
 
-                // Check if the value is a function call
-                // if let functionCall = initializer.value.as(FunctionCallExprSyntax.self) {
-                //     print("\(indentation)local \(variableName) = ", terminator: "")
-                //     _ = visit(functionCall)
-                //     return .skipChildren
-                // }
-
-                // If the initializer is a quoted string with Swift interpolation, convert it.
-                if value.first == "\"" && value.last == "\"" && value.contains("\\(") {
-                    value = convertStringLiteralToLuauInterpolation(value)
-                }
-
-                // print("\(indentation)local \(variableName) = \(value)")
                 print("\(indentation)local \(variableName) = ", terminator: "")
             }
         }
@@ -54,17 +39,15 @@ class SwiftToLuauConverter: SyntaxVisitor {
                 var value = initializer.value.description.trimmingCharacters(
                     in: .whitespacesAndNewlines)
 
-                // Check if the value is a function call
                 if let functionCall = initializer.value.as(FunctionCallExprSyntax.self) {
                     _ = visit(functionCall)
                     return
                 }
 
-                // If the initializer is a quoted string with Swift interpolation, convert it.
                 if value.first == "\"" && value.last == "\"" && value.contains("\\(") {
                     value = convertStringLiteralToLuauInterpolation(value)
                 }
-                // print("\(indentation)local \(variableName) = \(value)")
+
                 print("\(value)")
             }
         }
@@ -73,11 +56,9 @@ class SwiftToLuauConverter: SyntaxVisitor {
     override func visit(_ node: FunctionDeclSyntax) -> SyntaxVisitorContinueKind {
         let functionName = node.name.text
         let parameters = node.signature.parameterClause.parameters.map { param in
-            // Simplification: just use the first name ignoring external labels and types
             param.secondName?.text ?? param.firstName.text
         }.joined(separator: ", ")
 
-        // Print the function header
         print("function \(functionName)(\(parameters))")
         increaseIndent()
 
@@ -89,36 +70,41 @@ class SwiftToLuauConverter: SyntaxVisitor {
         print("end")
     }
 
-    // func walkFunctionBody(_ body: CodeBlockSyntax) {
-    //     for stmt in body.statements {
-    //         if let varDecl = stmt.item.as(VariableDeclSyntax.self) {
-    //             _ = visit(varDecl)
-    //         } else if let exprStmt = stmt.item.as(ExpressionStmtSyntax.self) {
-    //             if let functionCall = exprStmt.expression.as(FunctionCallExprSyntax.self) {
-    //                 _ = visit(functionCall)
-    //             }
-    //         } else if let returnStmt = stmt.item.as(ReturnStmtSyntax.self) {
-    //             let expr =
-    //                 returnStmt.expression?.description.trimmingCharacters(
-    //                     in: .whitespacesAndNewlines) ?? ""
-    //             print("\(indentation)return \(expr)")
-    //         } else {
-    //             let stmtText = stmt.description.trimmingCharacters(in: .whitespacesAndNewlines)
-    //             print("\(indentation)\(stmtText)")
-    //         }
-    //     }
-    // }
-
-    // Process function call expressions to strip parameter labels
     override func visit(_ node: FunctionCallExprSyntax) -> SyntaxVisitorContinueKind {
         print(convertFunctionCall(node))
 
         return .skipChildren
     }
 
-    // Enums
     override func visit(_ node: EnumDeclSyntax) -> SyntaxVisitorContinueKind {
         print(convertEnum(node))
+
+        return .skipChildren
+    }
+
+    // Switch statements
+    override func visit(_ node: SwitchExprSyntax) -> SyntaxVisitorContinueKind {
+        var currentNode: Syntax? = node.parent
+
+        while let parent = currentNode {
+
+            if let functionDecl = parent.as(FunctionDeclSyntax.self) {
+                // Function declaration found
+                let parameters = functionDecl.signature.parameterClause.parameters
+
+                for parameter in parameters {
+                    if let switchSubject = node.subject.as(DeclReferenceExprSyntax.self) {
+                        if switchSubject.baseName.text == parameter.firstName.text {
+                            let type = parameter.type.description
+                            print(convertSwitch(node, inputType: type))
+                            break
+                        }
+                    }
+                }
+                break
+            }
+            currentNode = parent.parent
+        }
 
         return .skipChildren
     }
