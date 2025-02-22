@@ -5,6 +5,9 @@ import PackageDescription
 
 let package = Package(
     name: "Roblox-Swift",
+    platforms: [
+        .macOS(.v13)
+    ],
     dependencies: [
         .package(url: "https://github.com/swiftlang/swift-syntax", from: "600.0.1")
     ],
@@ -12,6 +15,11 @@ let package = Package(
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .executableTarget(
-            name: "Roblox-Swift"),
+            name: "Roblox-Swift",
+            dependencies: [
+                .product(name: "SwiftSyntax", package: "swift-syntax"),
+                .product(name: "SwiftParser", package: "swift-syntax"),
+                .product(name: "SwiftSyntaxBuilder", package: "swift-syntax"),
+            ]),
     ]
 )
