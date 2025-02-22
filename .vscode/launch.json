@@ -1,0 +1,40 @@
+{
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:RobloxSwift}",
+            "name": "Debug Roblox-Swift",
+            "program": "${workspaceFolder:RobloxSwift}/.build/debug/Roblox-Swift",
+            "preLaunchTask": "swift: Build Debug Roblox-Swift"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:RobloxSwift}",
+            "name": "Release Roblox-Swift",
+            "program": "${workspaceFolder:RobloxSwift}/.build/release/Roblox-Swift",
+            "preLaunchTask": "swift: Build Release Roblox-Swift"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:RobloxSwift}",
+            "name": "Debug Roblox-swift",
+            "program": "${workspaceFolder:RobloxSwift}/.build/debug/Roblox-swift",
+            "preLaunchTask": "swift: Build Debug Roblox-swift"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:RobloxSwift}",
+            "name": "Release Roblox-swift",
+            "program": "${workspaceFolder:RobloxSwift}/.build/release/Roblox-swift",
+            "preLaunchTask": "swift: Build Release Roblox-swift"
+        }
+    ]
+}
