@@ -14,3 +14,15 @@ func test(testValue: Int, _ multiplier: Int, _ divisor: Int)
 }
 
 let foo = test(testValue: 3, 3, 3)
+
+enum Direction {
+    case north
+    case south
+    case east
+    case west
+}
+
+enum ErrorCode: Int {
+    case notFound = 404
+    case unauthorized = 401
+}

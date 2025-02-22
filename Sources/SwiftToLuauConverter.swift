@@ -1,5 +1,7 @@
 import Foundation
+
 import SwiftParser
+
 import SwiftSyntax
 
 class SwiftToLuauConverter: SyntaxVisitor {
@@ -26,21 +28,46 @@ class SwiftToLuauConverter: SyntaxVisitor {
                     in: .whitespacesAndNewlines)
 
                 // Check if the value is a function call
-                if let functionCall = initializer.value.as(FunctionCallExprSyntax.self) {
-                    print("\(indentation)local \(variableName) = ", terminator: "")
-                    _ = visit(functionCall)
-                    return .skipChildren
-                }
+                // if let functionCall = initializer.value.as(FunctionCallExprSyntax.self) {
+                //     print("\(indentation)local \(variableName) = ", terminator: "")
+                //     _ = visit(functionCall)
+                //     return .skipChildren
+                // }
 
                 // If the initializer is a quoted string with Swift interpolation, convert it.
                 if value.first == "\"" && value.last == "\"" && value.contains("\\(") {
                     value = convertStringLiteralToLuauInterpolation(value)
                 }
 
-                print("\(indentation)local \(variableName) = \(value)")
+                // print("\(indentation)local \(variableName) = \(value)")
+                print("\(indentation)local \(variableName) = ", terminator: "")
             }
         }
         return .skipChildren
+    }
+
+    override func visitPost(_ node: VariableDeclSyntax) {
+        for binding in node.bindings {
+            if let pattern = binding.pattern.as(IdentifierPatternSyntax.self),
+                let initializer = binding.initializer
+            {
+                var value = initializer.value.description.trimmingCharacters(
+                    in: .whitespacesAndNewlines)
+
+                // Check if the value is a function call
+                if let functionCall = initializer.value.as(FunctionCallExprSyntax.self) {
+                    _ = visit(functionCall)
+                    return
+                }
+
+                // If the initializer is a quoted string with Swift interpolation, convert it.
+                if value.first == "\"" && value.last == "\"" && value.contains("\\(") {
+                    value = convertStringLiteralToLuauInterpolation(value)
+                }
+                // print("\(indentation)local \(variableName) = \(value)")
+                print("\(value)")
+            }
+        }
     }
 
     override func visit(_ node: FunctionDeclSyntax) -> SyntaxVisitorContinueKind {
@@ -54,15 +81,12 @@ class SwiftToLuauConverter: SyntaxVisitor {
         print("function \(functionName)(\(parameters))")
         increaseIndent()
 
-        // Process the function body if it exists
-        if let body = node.body {
-            walkFunctionBody(body)
-        }
+        return .visitChildren
+    }
 
+    override func visitPost(_ node: FunctionDeclSyntax) {
         decreaseIndent()
         print("end")
-
-        return .skipChildren
     }
 
     func walkFunctionBody(_ body: CodeBlockSyntax) {
@@ -125,6 +149,34 @@ class SwiftToLuauConverter: SyntaxVisitor {
 
         // Print the transformed function call with current indentation.
         print("\(indentation)\(functionName)(\(arguments))")
+        return .skipChildren
+    }
+
+    // Enums
+    func convertEnum(_ enumDecl: EnumDeclSyntax) -> String {
+        let enumName = enumDecl.name.text
+        var cases: [String] = []
+
+        for member in enumDecl.memberBlock.members {
+            if let caseDecl = member.decl.as(EnumCaseDeclSyntax.self) {
+                for element in caseDecl.elements {
+                    let caseName = element.name.text
+                    if let rawValue = element.rawValue?.value {
+                        cases.append("\(caseName) = \(rawValue.description)")
+                    } else {
+                        cases.append("\(caseName) = \"\(caseName)\"")
+                    }
+                }
+            }
+        }
+
+        let luaTable = cases.joined(separator: ",\n\t")
+        return "local \(enumName) = {\n\t\(luaTable)\n}"
+    }
+
+    override func visit(_ node: EnumDeclSyntax) -> SyntaxVisitorContinueKind {
+        print(convertEnum(node))
+
         return .skipChildren
     }
 }
